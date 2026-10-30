@@ -19,13 +19,29 @@
 
 ## 安装
 
-作为 DSH bundle 安装本目录（插件管理器或 CLI）：
+从 GitHub 安装（推荐）：
 
-```
-dsh plugin --profile <profile> install <本目录>
+```bash
+dsh plugin --profile <profile> add github:lindingkao/dsh-settings-button
 ```
 
-profile 以 `link:` 引用本目录，因此**不要删除或移动它**，否则插件会失效。
+等价的完整写法：
+
+```bash
+dsh plugin --profile <profile> add https://github.com/lindingkao/dsh-settings-button.git
+```
+
+从本地目录安装（开发用）：
+
+```bash
+dsh plugin --profile <profile> add /path/to/dsh-settings-button
+```
+
+`dsh plugin ... add` 会把依赖写进 profile 的 `package.json`，并自动把声明了 `dsh.bundle` 的依赖加入 `dsh.profile.bundles`；装完重启或刷新页面即可。
+
+> 注意：`dsh plugin ... install` 转发的是 pnpm 的 `install`（安装已有依赖），**不接受包名**，不要写成 `install <包>`；`lindingkao/dsh-settings-button` 这种裸 `owner/repo` 也不是有效目标，必须带 `github:` 前缀或写成完整 git URL。
+
+本地目录安装时，profile 以 `link:`/`file:` 引用该目录，因此**不要删除或移动它**，否则插件会失效。
 
 ## 兼容性
 
