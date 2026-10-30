@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Settings Button",
+    "description": "Adds a settings button (gear + label) to the right of the account avatar in the sidebar foot; one click opens Settings."
+  }
+}

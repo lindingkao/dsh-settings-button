@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Settings button placed to the right of the account avatar">
+  <rect width="128" height="128" rx="30" fill="#F2F5FA"/>
+  <g fill="#2C3A4F">
+    <circle cx="38" cy="50" r="13"/>
+    <path d="M17 92c0-11 9-19 21-19s21 8 21 19z"/>
+  </g>
+  <g fill="none" stroke="#2C6BED" stroke-width="6" stroke-linecap="round" transform="translate(92 64)">
+    <circle r="13"/>
+    <path d="M0 -18 V-24 M0 18 V24 M-18 0 H-24 M18 0 H24 M-12.7 -12.7 L-17 -17 M12.7 12.7 L17 17 M-12.7 12.7 L-17 17 M12.7 -12.7 L17 -17"/>
+  </g>
+</svg>

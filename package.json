@@ -1,0 +1,55 @@
+{
+  "name": "dsh-settings-button",
+  "version": "0.1.0",
+  "description": "在侧栏账号头像的右侧常驻一个设置按钮，一点直达设置面板 · Keeps a Settings gear right of the account avatar in the sidebar foot",
+  "keywords": [
+    "deepseek",
+    "deepseek-harness",
+    "dsh",
+    "plugin",
+    "cordis",
+    "sidebar",
+    "settings"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lindingkao/dsh-settings-button.git"
+  },
+  "homepage": "https://github.com/lindingkao/dsh-settings-button#readme",
+  "bugs": {
+    "url": "https://github.com/lindingkao/dsh-settings-button/issues"
+  },
+  "type": "module",
+  "sideEffects": [
+    "./client.js"
+  ],
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
+  },
+  "files": [
+    "lib",
+    "client.js",
+    "cordis.patch.yml",
+    "locale",
+    "icon.svg",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-sidebar",
+        "@deepseek-ai/dsh-client-ui-settings-general"
+      ]
+    }
+  }
+}
