@@ -1,6 +1,6 @@
 {
   "name": "dsh-settings-button",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "在侧栏账号头像的右侧常驻一个设置按钮，一点直达设置面板 · Keeps a Settings gear right of the account avatar in the sidebar foot",
   "keywords": [
     "deepseek",
@@ -47,6 +47,7 @@
       "platform": "web",
       "inject": [
         "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-shortcuts",
         "@deepseek-ai/dsh-client-ui-sidebar",
         "@deepseek-ai/dsh-client-ui-settings-general"
       ]

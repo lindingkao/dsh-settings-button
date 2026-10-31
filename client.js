@@ -5,13 +5,16 @@
  * `div.<hash>_triggerRow`，其中只有账号启动器（头像 + 名字，按钮
  * `aria-label="账号菜单"`），设置入口在账号菜单内部。
  *
- * 本插件在该行尾注入一个常驻齿轮按钮：点击时短暂打开账号菜单并点其中的
- * 设置项（菜单在注入的 suppress 类下不可见，因此不闪），交由宿主自己打开
- * 设置面板。宿主若已经自带设置触发按钮（较新版本），则只把该按钮排到行尾，
- * 不再注入，避免出现两个入口。
+ * 本插件在该行尾注入一个常驻齿轮按钮。点击时优先派发宿主自己的
+ * `settings.open` 快捷键命令（经 ctx.shortcuts.registry.invoke 直达 shell 的
+ * actions.open()，不经过任何 DOM 交互）；命令不可用时才回退到短暂打开账号
+ * 菜单并点其中的设置项（菜单在注入的 suppress 类下不可见，因此不闪）。宿主
+ * 若已经自带设置触发按钮（较新版本），则只把该按钮排到行尾，不再注入，避免
+ * 出现两个入口。
  *
  * 约束：本文件是宿主直接装载的零构建产物（window.__ModuleLoader__.load），
- * 不 require 任何 Harness Client 包，只经由 ctx.slots / ctx.locale 协作。
+ * 不 require 任何 Harness Client 包，只经由 ctx.slots / ctx.locale /
+ * ctx.shortcuts 协作。
  */
 window.__ModuleLoader__.load({
   id: 'dsh-settings-button',
@@ -30,6 +33,12 @@ window.__ModuleLoader__.load({
     const SETTLE_MS = 120
     /** 打开账号菜单后等待其渲染的时间（毫秒）。 */
     const OPEN_SETTLE_MS = 160
+    /** 派发 settings.open 命令后每次轮询的间隔（毫秒）。 */
+    const COMMAND_SETTLE_MS = 40
+    /** 派发命令后的轮询次数：40ms × 6 = 240ms，足够面板挂载。 */
+    const COMMAND_POLLS = 6
+    /** 宿主快捷键层判定「当前弹窗」用的选择器，与 dsh-client-shortcuts 一致。 */
+    const MODAL_SELECTOR = '[role="dialog"][aria-modal="true"], [role="dialog"][data-shortcut-modal]'
     /** 窄栏（56px 轨道）阈值：行宽小于该值时藏起齿轮，避免挤压头像。 */
     const RAIL_MAX_WIDTH = 60
     /** 宿主已自带设置按钮时，让它排在行尾的 order。 */
@@ -120,6 +129,53 @@ window.__ModuleLoader__.load({
     }
 
     /**
+     * 当前最顶层的弹窗名：与 dsh-client-shortcuts 派发快捷键时读的是同一份
+     * 结构（最后一个 dialog 胜出，`data-shortcut-modal` 属性即名称，没有该
+     * 属性的一律算 `other`）。
+     * @returns 弹窗名；没有弹窗时 null。
+     */
+    function currentModal() {
+      if (typeof document === 'undefined' || typeof document.querySelectorAll !== 'function') return null
+      const dialogs = document.querySelectorAll(MODAL_SELECTOR)
+      const top = dialogs[dialogs.length - 1]
+      if (top === undefined) return null
+      return top.dataset.shortcutModal ?? 'other'
+    }
+
+    /**
+     * 宿主是否已经把 `settings.open` 命令登记进快捷键注册表。ui-settings-general
+     * 在 `sidebar.settings` 座位被注入时才注册它，所以这里只读、不假设。
+     * @param registry - ShortcutsService 的 registry 字段。
+     * @returns 命令是否可用。
+     */
+    function hasSettingsCommand(registry) {
+      const commands = registry.commands
+      return commands !== undefined && typeof commands.has === 'function' && commands.has('settings.open')
+    }
+
+    /**
+     * 首选打开方式：直接派发宿主的 `settings.open` 命令。
+     *
+     * 该命令的 resolve 只认 `modal === null`（打开）与 `'settings'`（关闭），
+     * 有别的弹窗在场时会被判为 blocked，所以这里先读当前弹窗再决定——绝不能
+     * 把「应该打开」误发成「关闭」。invoke 本身没有返回值，是否真的生效由
+     * 调用方随后检查界面。
+     * @returns 命令是否已经派发出去。
+     */
+    function openViaCommand() {
+      const registry = context?.shortcuts?.registry
+      if (registry === undefined || registry === null || typeof registry.invoke !== 'function') return false
+      if (!hasSettingsCommand(registry)) return false
+      if (currentModal() !== null) return false
+      try {
+        registry.invoke('settings.open', { modal: null, region: 'page' })
+        return true
+      } catch {
+        return false
+      }
+    }
+
+    /**
      * 等待一小段时间，让菜单或面板完成渲染。
      * @param ms - 毫秒。
      * @returns 到点后兑现的 Promise。
@@ -131,13 +187,14 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * 打开设置：短暂打开账号菜单并点其中的设置项，菜单在 SUPPRESS_CLASS
-     * 下不可见，因此用户只看到设置面板直接出现。
+     * 回退打开方式：短暂打开账号菜单并点其中的设置项，菜单在 SUPPRESS_CLASS
+     * 下不可见，因此用户只看到设置面板直接出现。只在 `settings.open` 命令
+     * 不可用或派发后没生效时才会走到这里。
      * @param row - 脚部行，用于定位账号菜单按钮。
      * @param label - 设置文案。
      * @returns 是否点到了设置项。
      */
-    async function openSettings(row, label) {
+    async function openViaMenu(row, label) {
       if (settingsOpen()) return true
       const account = row.querySelector('button')
       if (account === null) return false
@@ -162,6 +219,27 @@ window.__ModuleLoader__.load({
       } finally {
         body.classList.remove(SUPPRESS_CLASS)
       }
+    }
+
+    /**
+     * 打开设置：先派发宿主的 `settings.open` 命令；命令没生效（未注册、
+     * 注册表被收紧，或派发后 240ms 内面板仍未出现）才回退到驱动账号菜单。
+     * @param row - 脚部行，回退路径用它定位账号菜单按钮。
+     * @param label - 设置文案。
+     * @returns 是否成功打开了面板。
+     */
+    async function openSettings(row, label) {
+      const modal = currentModal()
+      if (settingsOpen() || modal === 'settings') return true
+      // 有别的弹窗挡着：命令会被判 blocked，驱动菜单也点不动，直接不动。
+      if (modal !== null) return false
+      if (openViaCommand()) {
+        for (let poll = 0; poll < COMMAND_POLLS; poll += 1) {
+          await wait(COMMAND_SETTLE_MS)
+          if (settingsOpen() || currentModal() === 'settings') return true
+        }
+      }
+      return openViaMenu(row, label)
     }
 
     /**
@@ -308,7 +386,7 @@ window.__ModuleLoader__.load({
     }
 
     return {
-      inject: ['slots', 'locale'],
+      inject: ['slots', 'locale', 'shortcuts'],
       /**
        * 装配脚部齿轮。
        * @param ctx - Client cordis 上下文。
